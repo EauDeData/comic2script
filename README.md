@@ -1,5 +1,7 @@
 # Generació de Comic2Script
 
+Idea de projecte a mig-llarg termini amb varies tasques implicades.
+
 ## Resum
 
 Ser capaços d'agafar un cómic i fer la translació automaticament a guió.
