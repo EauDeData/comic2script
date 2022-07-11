@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+
+<head>
+
+</head>
+
+<body> 
+
+    {%for v in vols%}
+
+    <button href = "/volumes/{{string}}/edition/{{value2}}/page/{{v}}" onclick="window.open('/volumes/{{string}}/edition/{{value2}}/page/{{v}}')">{{v}}</button>
+
+    {%endfor%}
+</body>

@@ -14,6 +14,25 @@ db_name = "comics"
 
 # https://open.spotify.com/track/1u8c2t2Cy7UBoG4ArRcF5g?si=2870274994804085
 
+
+def list_comics(base):
+
+    comics = {}
+
+    for (dir_path, dir_names, file_names) in os.walk(base):
+
+        for file in file_names:
+
+            splitted = dir_path.split('/')
+            comic_volume, comic_edition = splitted[-3], splitted[-2]
+            if not comic_volume in comics: comics[comic_volume] = {}
+            if not comic_edition in comics[comic_volume]: comics[comic_volume][comic_edition] = []
+            comics[comic_volume][comic_edition] += [file]
+
+    
+    return comics
+
+
 def get_mongo_instace(endpoint = 'mongodb://localhost:27017/'):
     return pymongo.MongoClient(endpoint) # Given the mongo service endpoint returns the client instance
 
@@ -123,3 +142,6 @@ def get_image_collections(db_name, client):
     images_collection = get_collection(db_name, 'images', client)
     return images_collection.find().distinct('meta.collection')
 
+if __name__ == '__main__':
+
+    print(list_comics('/home/adri/Desktop/cvc/data/comics/comicbookplus_data/'))
