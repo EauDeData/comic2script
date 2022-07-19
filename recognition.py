@@ -1,6 +1,5 @@
 from curses import noecho
 from sys import flags
-from tkinter.messagebox import RETRY
 from urllib.parse import _NetlocResultMixinStr
 import cv2
 from PIL import Image
@@ -17,6 +16,10 @@ from scipy.cluster.vq import kmeans,vq
 import torch
 import clip
 import matplotlib.patches as mpatches
+from transformers import SegformerFeatureExtractor, SegformerForSemanticSegmentation
+from transformers import BeitFeatureExtractor, BeitForSemanticSegmentation
+from torchvision import transforms
+
 
 def layout_contours(path, image = False):
 
@@ -113,16 +116,48 @@ def labelVisualize(num_class,color_dict,img, labels):
     for i in range(num_class):
         img_out[img == i,:] = color_dict[i]
 
-    patches = [ mpatches.Patch(color=(color_dict[i][0] / 255, color_dict[i][1] / 255, color_dict[i][2] / 255), label=labels[i] ) for i in range(len(labels)) ]
-    return img_out / 255, patches
+    #patches = [ mpatches.Patch(color=(color_dict[i][0] / 255, color_dict[i][1] / 255, color_dict[i][2] / 255), label=labels[i] ) for i in range(len(labels)) ]
+    return img_out / 255, None
+
+def segmentation(img):
+    feature_extractor = BeitFeatureExtractor.from_pretrained('microsoft/beit-base-finetuned-ade-640-640')
+    model = BeitForSemanticSegmentation.from_pretrained('microsoft/beit-base-finetuned-ade-640-640')
+
+    dic = {x: (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256)) for x, _, in enumerate(range(150))}
+
+
+    image = Image.fromarray(img).convert('RGB')
+    inputs = feature_extractor(images=image, return_tensors="pt")
+    outputs = model(**inputs)
+    logits = outputs.logits.squeeze().argmax(0).detach().numpy()
+    resized = cv2.resize(logits, img.T.shape, 0, 0, interpolation = cv2.INTER_NEAREST)
+    print(logits.shape)
+
+    return resized, list(range(150)), dic
+
+
+def text_segmentation(img):
+
+    preprocess = transforms.Compose([
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+
+    model = torch.load('learning/model_checkpoints/21.pkl', 'cpu')
+    in_ = preprocess(torch.from_numpy(img.transpose(2, 0, 1))).unsqueeze(0).float()
+    print(in_.shape)
+    out_ = (torch.nn.functional.sigmoid(model(in_).squeeze()).detach().numpy())
+
+    return out_
+
 
 def clip_heatmaps(img, masks, bbxs):
 
     #categories = ["background / texture", "A drawing of a person", "A drawing of group of people (comic style)", "some text", "A drawing of a face (comic syle)", 'Black Background']
     
     #categories = [ "a printed document with the Drawing Of A single person",  "a printed document with the Drawing Of A group of people", "a conversation between people"]
-    #categories = [f"{i} - people dialogue" for i in range(6)]
-    categories = [f"there's {i} people in this image" for i in range(4)] 
+    categories = [f"{i} - people dialogue" for i in range(6)]
+    #categories = [f"there's {i} people in this image" for i in range(4)] 
 
 
     # NOTE: 0 PEOPLE DIALOGUE DETECTS SOLO TEXT IN CONTRAST TO OTHER SENTENCES
@@ -181,10 +216,30 @@ def normalize(im, max_ = 255, type_ = int):
 
 if __name__ == '__main__':
 
-    path = '/home/adri/Desktop/cvc/data/XAC_Data/Costums_i_tradicions/192_10403/2463209.jpg'
+    path = "/home/adri/Desktop/cvc/data/comics/comicbookplus_data/?cid=2615/?dlid=38382/0/2.jpg"
     im, mask, cont, masks, bbxs = layout_contours(path)
-    #visualize(im, mask, cont)
     #im[~bin_mask(mask) ] = 0
+
+    
+    imagesum = cv2.resize(cv2.cvtColor(im, cv2.COLOR_GRAY2BGR) / 255, (512, 512))
+    
+    im2 = text_segmentation(imagesum)
+    plt.imshow(im2 * imagesum[:, :, 0])
+    plt.show()
+    
+    '''
+
+
+    segm, cat, dic = segmentation(im)
+    colormap, patch = labelVisualize(len(cat), dic, segm, cat)
+    imagesum = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR) / 255
+
+
+    plt.imshow(( colormap*.5 + imagesum*.5))
+    plt.show()
+    '''
+    #visualize(im, mask, cont)
+    #
     #print(im.shape)
     #img=cv2.drawKeypoints(im,features(im)[0],np.zeros_like(im),flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     #plt.imshow(img)
@@ -195,6 +250,8 @@ if __name__ == '__main__':
     #plt.bar(range(len(f[-1])), f[-1])
     #plt.show()
 
+    '''
+    
     map_, cat, labels = clip_heatmaps(normalize(im, max_=1, type_=float), masks, bbxs)
     print(map_)
     colormap, patch = labelVisualize(len(cat), cat, map_, labels)
@@ -203,4 +260,7 @@ if __name__ == '__main__':
     plt.imshow(( colormap*.5 + imagesum*.5))
     plt.legend(handles=patch, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     plt.show()
+
+    
+    '''
 

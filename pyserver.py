@@ -43,7 +43,7 @@ def pages(value, value2):
 def return_page(value, value2, num):
 
     default_  = f'/home/adri/Desktop/cvc/data/comics/comicbookplus_data/?{value}/?{value2}/0/{num}.jpg'
-    im, mask, cont = recognition.layout_contours(default_)
+    im, mask, cont, _, _ = recognition.layout_contours(default_)
 
     if len(im.shape) != 3: im = cv2.cvtColor(~im, cv2.COLOR_GRAY2RGB)
     final = 0.7 * im + 0.3 * mask + cont
